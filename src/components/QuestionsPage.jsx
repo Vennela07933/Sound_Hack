@@ -2,66 +2,31 @@ import React from 'react';
 
 /**
  * QuestionsPage Component
- * Displays 3 multiple choice questions sequentially based on the audio story.
- * Does NOT reveal answers prior to submission.
+ * Displays 3 multiple-choice questions for the active story.
  */
-export const QUESTIONS_DATA = [
-  {
-    id: 1,
-    question: "When did Rahul join the company?",
-    options: [
-      { key: 'A', text: 'May' },
-      { key: 'B', text: 'June' },
-      { key: 'C', text: 'July' },
-      { key: 'D', text: 'August' }
-    ],
-    correctAnswer: 'B'
-  },
-  {
-    id: 2,
-    question: "Which module was Rahul responsible for?",
-    options: [
-      { key: 'A', text: 'Login module' },
-      { key: 'B', text: 'Payment module' },
-      { key: 'C', text: 'Database module' },
-      { key: 'D', text: 'UI module' }
-    ],
-    correctAnswer: 'B'
-  },
-  {
-    id: 3,
-    question: "How long did the payment module take to complete?",
-    options: [
-      { key: 'A', text: 'Two weeks' },
-      { key: 'B', text: 'Four weeks' },
-      { key: 'C', text: 'Six weeks' },
-      { key: 'D', text: 'Eight weeks' }
-    ],
-    correctAnswer: 'C'
-  }
-];
-
 export default function QuestionsPage({
+  story,
   currentQuestionIndex,
   selectedAnswers,
   onSelectAnswer,
   onNextQuestion,
   onSubmitAnswers
 }) {
-  const currentQ = QUESTIONS_DATA[currentQuestionIndex];
+  const questionsData = story.questions;
+  const currentQ = questionsData[currentQuestionIndex];
   const selectedOption = selectedAnswers[currentQuestionIndex];
-  const isLastQuestion = currentQuestionIndex === QUESTIONS_DATA.length - 1;
+  const isLastQuestion = currentQuestionIndex === questionsData.length - 1;
 
   return (
     <div className="page-content questions-page">
-      {/* Tracker & Progress Header */}
+      {/* Header & Step Counter */}
       <div className="question-tracker">
         <span className="question-badge">
-          Question {currentQuestionIndex + 1} of {QUESTIONS_DATA.length}
+          Story #{story.id}: Question {currentQuestionIndex + 1} of {questionsData.length}
         </span>
 
         <div className="step-dots">
-          {QUESTIONS_DATA.map((_, idx) => (
+          {questionsData.map((_, idx) => (
             <div
               key={idx}
               className={`step-dot ${
@@ -76,7 +41,7 @@ export default function QuestionsPage({
         </div>
       </div>
 
-      {/* Question Text & Options */}
+      {/* Question & Options */}
       <div className="question-box">
         <h3 className="question-text">{currentQ.question}</h3>
 
@@ -97,7 +62,7 @@ export default function QuestionsPage({
         </div>
       </div>
 
-      {/* Action Button */}
+      {/* Action Buttons */}
       {isLastQuestion ? (
         <button
           className="btn-primary"

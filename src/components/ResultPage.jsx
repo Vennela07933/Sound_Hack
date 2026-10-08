@@ -1,17 +1,25 @@
 import React from 'react';
-import { QUESTIONS_DATA } from './QuestionsPage';
+import { calculateStars, getStarDisplay } from '../data/storiesData';
 
 /**
  * ResultPage Component
- * Displays score summary, performance badges, answer breakdowns,
- * and a "PLAY AGAIN" button to reset the challenge.
+ * Displays score summary, listener efficiency star rating,
+ * and next level / grand summary navigation buttons.
  */
-export default function ResultPage({ selectedAnswers, onPlayAgain }) {
-  // Calculate score & statistics
+export default function ResultPage({
+  story,
+  selectedAnswers,
+  listenCount,
+  totalCompletedCount,
+  onNextStory,
+  onSelectAnotherStory,
+  onViewGrandSummary
+}) {
+  const questionsData = story.questions;
   let correctCount = 0;
   let wrongCount = 0;
 
-  QUESTIONS_DATA.forEach((q, idx) => {
+  questionsData.forEach((q, idx) => {
     if (selectedAnswers[idx] === q.correctAnswer) {
       correctCount++;
     } else {
@@ -19,10 +27,10 @@ export default function ResultPage({ selectedAnswers, onPlayAgain }) {
     }
   });
 
-  const totalScore = correctCount * 10;
-  const maxScore = QUESTIONS_DATA.length * 10;
+  const score = correctCount * 10;
+  const maxScore = questionsData.length * 10;
+  const starsEarned = calculateStars(listenCount);
 
-  // Determine Performance Message based on prompt specifications
   const getPerformanceMessage = (score) => {
     if (score === 30) return "Excellent Listening! 🏆";
     if (score === 20) return "Good Job! 👍";
@@ -30,21 +38,28 @@ export default function ResultPage({ selectedAnswers, onPlayAgain }) {
     return "Try Again! 🎧";
   };
 
-  const performanceMsg = getPerformanceMessage(totalScore);
-
   return (
     <div className="page-content result-page">
       <div className="result-header">
         <span className="result-emoji">🎉</span>
-        <h2 className="section-title">GAME COMPLETE!</h2>
+        <h2 className="section-title">Quiz Complete: Story #{story.id}</h2>
+        <p className="app-subtitle">{story.title}</p>
       </div>
 
       <div className="result-score-card">
         <div className="score-display">
-          {totalScore} <span>/ {maxScore}</span>
+          {score} <span>/ {maxScore}</span>
         </div>
+
+        <div className="stars-earned-banner">
+          <span className="stars-large">{getStarDisplay(starsEarned)}</span>
+          <span className="stars-label">
+            Efficiency Rating ({listenCount === 1 ? '1 Listen' : `${listenCount} Listens`})
+          </span>
+        </div>
+
         <div className="performance-badge">
-          {performanceMsg}
+          {getPerformanceMessage(score)}
         </div>
       </div>
 
@@ -60,9 +75,21 @@ export default function ResultPage({ selectedAnswers, onPlayAgain }) {
         </div>
       </div>
 
-      <button className="btn-primary" onClick={onPlayAgain}>
-        PLAY AGAIN 🔄
-      </button>
+      <div className="action-button-group">
+        {story.id < 10 && (
+          <button className="btn-primary" onClick={onNextStory}>
+            NEXT STORY (#{story.id + 1}) →
+          </button>
+        )}
+
+        <button className="btn-secondary" onClick={onSelectAnotherStory}>
+          STORY HUB 📚
+        </button>
+
+        <button className="btn-secondary highlight" onClick={onViewGrandSummary}>
+          VIEW GRAND SUMMARY ({totalCompletedCount}/10) 🏆
+        </button>
+      </div>
     </div>
   );
 }

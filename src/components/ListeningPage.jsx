@@ -1,21 +1,25 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { calculateStars, getStarDisplay } from '../data/storiesData';
 
 /**
  * ListeningPage Component
- * Provides audio playback controls, speed adjusters (0.5x, 1x, 1.5x, 2x),
- * and audio state tracking. Note: The written story text is intentionally HIDDEN.
+ * Plays story audio, controls speed, tracks listen count,
+ * and displays active efficiency rating state.
  */
-export default function ListeningPage({ playbackSpeed, setPlaybackSpeed, onReady }) {
+export default function ListeningPage({
+  story,
+  playbackSpeed,
+  setPlaybackSpeed,
+  listenCount,
+  setListenCount,
+  onReady
+}) {
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [audioError, setAudioError] = useState(false);
 
-  // Story text used exclusively for Web Speech API synthesis fallback if audio file fails
-  const storySpeechText = "Rahul joined a software company in June. His team was developing an e-commerce application. Rahul was responsible for the payment module. The team expected to complete the module in four weeks, but a technical issue delayed the work, and it took six weeks to complete.";
-
-  // Update playback speed whenever playbackSpeed state changes
+  // Update playback speed whenever state changes
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.playbackRate = playbackSpeed;
@@ -45,17 +49,17 @@ export default function ListeningPage({ playbackSpeed, setPlaybackSpeed, onReady
       setIsPlaying(false);
       if (window.speechSynthesis) window.speechSynthesis.pause();
     } else {
+      // If starting playback for the first time or re-listening, increment count if audio ended
+      if (listenCount === 0) {
+        setListenCount(1);
+      }
       audioRef.current.playbackRate = playbackSpeed;
       const playPromise = audioRef.current.play();
       if (playPromise !== undefined) {
         playPromise
-          .then(() => {
-            setIsPlaying(true);
-            setAudioError(false);
-          })
+          .then(() => setIsPlaying(true))
           .catch((err) => {
             console.warn("HTML5 Audio play error, invoking SpeechSynthesis fallback:", err);
-            setAudioError(true);
             playSpeechFallback();
           });
       }
@@ -63,6 +67,9 @@ export default function ListeningPage({ playbackSpeed, setPlaybackSpeed, onReady
   };
 
   const handleReplay = () => {
+    // Replay increases listen count and reduces efficiency rating
+    setListenCount((prev) => prev + 1);
+
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
       audioRef.current.playbackRate = playbackSpeed;
@@ -72,11 +79,11 @@ export default function ListeningPage({ playbackSpeed, setPlaybackSpeed, onReady
     }
   };
 
-  // Web Speech API fallback in case browser blocks or can't access audio file
+  // Web Speech API fallback for instant audio synthesis
   const playSpeechFallback = () => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(storySpeechText);
+      const utterance = new SpeechSynthesisUtterance(story.speechText);
       utterance.rate = playbackSpeed;
       utterance.onend = () => setIsPlaying(false);
       utterance.onerror = () => setIsPlaying(false);
@@ -104,18 +111,32 @@ export default function ListeningPage({ playbackSpeed, setPlaybackSpeed, onReady
   };
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const currentStars = calculateStars(listenCount);
 
   return (
     <div className="page-content listening-page">
       <div className="section-header">
-        <h2 className="section-title">🎧 Listen Carefully</h2>
+        <span className="brand-badge">{story.category} &bull; Story #{story.id}</span>
+        <h2 className="section-title">{story.icon} {story.title}</h2>
         <p className="section-instruction">
-          Listen to the complete story. You will answer questions based on what you hear.
+          Listen carefully to the audio. Do not rely on written text!
         </p>
       </div>
 
+      {/* Live Efficiency Rating Bar */}
+      <div className="listen-rating-banner">
+        <div className="rating-info">
+          <span className="rating-stars">{getStarDisplay(currentStars)}</span>
+          <span className="rating-text">
+            {listenCount <= 1
+              ? "1st Listen: Max ⭐⭐⭐ Rating Active!"
+              : `Listened ${listenCount} times (Rating decreased to ${currentStars} Stars)`}
+          </span>
+        </div>
+      </div>
+
       <div className="audio-box">
-        {/* Animated wave bars visualizer */}
+        {/* Animated wave visualizer */}
         <div className={`visualizer-wrapper ${isPlaying ? 'playing' : ''}`}>
           <div className="audio-bar"></div>
           <div className="audio-bar"></div>
@@ -127,12 +148,12 @@ export default function ListeningPage({ playbackSpeed, setPlaybackSpeed, onReady
           <div className="audio-bar"></div>
         </div>
 
-        {/* Audio Controls (Replay, Play/Pause) */}
+        {/* Audio Controls */}
         <div className="audio-controls">
           <button 
             className="btn-audio-action" 
             onClick={handleReplay}
-            title="Replay Audio"
+            title="Replay Audio (Increases listen count)"
           >
             ↺
           </button>
@@ -146,7 +167,7 @@ export default function ListeningPage({ playbackSpeed, setPlaybackSpeed, onReady
           </button>
         </div>
 
-        {/* Timeline Progress Bar */}
+        {/* Timeline Track */}
         <div className="time-progress-container">
           <div className="progress-track" onClick={handleSeek}>
             <div className="progress-fill" style={{ width: `${progressPercent}%` }}></div>
@@ -173,23 +194,13 @@ export default function ListeningPage({ playbackSpeed, setPlaybackSpeed, onReady
           </div>
         </div>
 
-        {/* 
-          HTML5 Audio Element 
-          Audio Source Location: public/audio/story1.mp3
-          Instructions: Place your custom audio file at 'public/audio/story1.mp3' if you want to swap the story audio!
-        */}
         <audio
           ref={audioRef}
-          src="/audio/story1.mp3"
+          src={story.audioUrl}
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
           onEnded={() => setIsPlaying(false)}
-          onError={() => console.log("Note: Native audio fallback ready if story1.mp3 missing.")}
         />
-      </div>
-
-      <div className="dev-note-box">
-        💡 <strong>Audio Source:</strong> <code>public/audio/story1.mp3</code> (Place your custom MP3 file here anytime)
       </div>
 
       <button className="btn-primary" onClick={() => {
@@ -197,7 +208,7 @@ export default function ListeningPage({ playbackSpeed, setPlaybackSpeed, onReady
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         onReady();
       }}>
-        I'M READY →
+        I'M READY FOR THE QUIZ →
       </button>
     </div>
   );
